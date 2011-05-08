@@ -1,10 +1,21 @@
+/**
+ * Copyright (c) 2011 ScalaStuff.org (joint venture of Alexander Dvorkovyy and Ruud Diterwich)
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 package org.scalastuff.scalacas.beans
 
 import org.scalastuff.scalacas.{ Mapper, HasIdSupport, HasId }
-import org.scalastuff.scalacas.serialization.Serializers._
-import org.apache.cassandra.thrift.Column
-import org.scale7.cassandra.pelops.{ Bytes, Mutator }
-import java.util.Arrays
 import org.scalastuff.proto.Preamble._
 import org.scalastuff.proto._
 
@@ -16,27 +27,13 @@ import org.scalastuff.proto._
 class ProtobufMapper[A <: HasId](prefix: String)(implicit mf: Manifest[A]) extends AbstractProtobufMapper[A](prefix) with HasIdSupport[A]
 
 abstract class AbstractProtobufMapper[A <: AnyRef](prefix: String)(implicit mf: Manifest[A]) extends Mapper[A](prefix) {
-  import ProtobufMapper._
-
   val reader = readerOf[A]
   val writer = writerOf[A]
   val format = ProtobufFormat
 
-  def objectToColumns(mutator: Mutator, obj: A): Seq[Column] = {
-    Seq(mutator.newColumn(PROTOBUF_BYTES, Bytes.fromByteArray(writer.toByteArray(obj, format))))
+  def objectToColumn(obj: A): Column = {
+    createColumn(name(obj), writer.toByteArray(obj, format))
   }
 
-  def columnsToObject(superColumnName: Array[Byte], subColumns: Seq[Column]): A = {
-    subColumns find (col => Arrays.equals(PROTOBUF_BYTES.getBytes.array, col.getName)) match {
-      case Some(col) =>
-        reader.readFrom(col.getValue, ProtobufFormat)
-      case None => 
-        throw new RuntimeException("Cannot deserialize object: column with name '%s' not found".format(PROTOBUF))
-    }
-  }
-}
-
-object ProtobufMapper {
-  val PROTOBUF = "-protobuf"
-  val PROTOBUF_BYTES = toBytes(PROTOBUF)
+  def columnToObject(column: Column): A = reader.readFrom(column.getValue, ProtobufFormat)
 }

@@ -1,12 +1,21 @@
+/**
+ * Copyright (c) 2011 ScalaStuff.org (joint venture of Alexander Dvorkovyy and Ruud Diterwich)
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 package org.scalastuff.scalacas
 
-import org.apache.cassandra.thrift.ConsistencyLevel
-import org.scale7.cassandra.pelops.Mutator
-import org.scale7.cassandra.pelops.Bytes
-
 class IndexColumnFamily(_db: Database, _columnFamilyName: String) extends ColumnFamily(_db, _columnFamilyName) {
-  import Mutators._
-
   implicit val mapper = StringMapper
 
   def findByKey(keyValue: String): Set[String] = {
@@ -17,14 +26,14 @@ class IndexColumnFamily(_db: Database, _columnFamilyName: String) extends Column
   } toSet
   
   def saveRef(keyValue: String, ref: String) {
-    mutate(ConsistencyLevel.QUORUM, write(keyValue, ref))
+    mutate(write(keyValue, ref))
   }
   
   def deleteRef(keyValue: String, ref: String) {
-    mutate(ConsistencyLevel.QUORUM, delete(keyValue, ref))
+    mutate(delete(keyValue, ref))
   }
   
   def deleteKey(keyValue: String) {
-    deleteRow(keyValue, ConsistencyLevel.QUORUM)
+    mutate(deleteRow(keyValue))
   }
 }

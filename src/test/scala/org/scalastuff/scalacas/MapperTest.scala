@@ -1,26 +1,23 @@
 package org.scalastuff.scalacas
 
-import org.scale7.cassandra.pelops._
-import org.apache.cassandra.thrift._
-import org.specs.SpecificationWithJUnit
+import org.junit.Test
+import org.junit.Assert._
 
-import org.junit.runner.RunWith
-import org.specs.runner.JUnitSuiteRunner
-
-@RunWith(classOf[JUnitSuiteRunner])
-class MapperTest extends SpecificationWithJUnit {
+class MapperTest {
 
   import TestClasses._
 
-  "test name" in {
-	scmA.name(A(1)) must be equalTo("A 1")
-	scmB.name(B(2)) must be equalTo("B 2")
-	scmB.name(B(3), C(4)) must be equalTo("C 4/B 3")
+  @Test
+  def testName  {
+	assertEquals("A 1", scmA.name(A(1)))
+	assertEquals("B 2", scmB.name(B(2)))
+	assertEquals("C 4/B 3", scmB.name(B(3), C(4)))
   }
   
-  "test full prefix" in {
-	scmA.fullPrefix must be equalTo("A ")
-	scmB.fullPrefix(C(4)) must be equalTo("C 4/B ")
+  @Test
+  def testFullPrefix {
+	assertEquals("A ", scmA.fullPrefix)
+	assertEquals("C 4/B ", scmB.fullPrefix(C(4)))
   }
 
 }
