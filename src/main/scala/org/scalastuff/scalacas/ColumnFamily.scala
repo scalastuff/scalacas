@@ -21,14 +21,14 @@ import me.prettyprint.cassandra.model.QuorumAllConsistencyLevelPolicy
 import me.prettyprint.hector.api.factory.HFactory
 import me.prettyprint.hector.api.mutation.Mutator
 
-class ColumnFamily(val db: Database, val columnFamilyName: String) extends Mutators {
+class ColumnFamily(val db: Database, val columnFamilyName: String) extends Mutators with Keys {
   if (!db.keyspaceDef.getCfDefs.exists(_.getName == columnFamilyName)) {
     val cfDef = new ThriftCfDef(db.keyspaceName, columnFamilyName)
     db.cluster.addColumnFamily(cfDef)
   }
-  
+
   val consistencyLevelPolicy = new QuorumAllConsistencyLevelPolicy()
-  
+
   lazy val keyspace = HFactory.createKeyspace(db.keyspaceName, db.cluster, consistencyLevelPolicy)
 
   def mutate(mutators: ((Mutators#Mutator, ColumnFamily) => _)*) = {
@@ -36,14 +36,45 @@ class ColumnFamily(val db: Database, val columnFamilyName: String) extends Mutat
     for (m <- mutators)
       m(mutator, this)
     mutator.execute()
-  }  
+  }
 
   def truncate() {
     db.cluster.truncate(db.keyspaceName, columnFamilyName)
   }
 
-  def key(k: String) = new Query(Seq(k))
-  def keys(ks: String*) = new Query(ks)
+  implicit def query2exectable(q: Query) = new {
+    def execute() = {
+      import q._
+      keys match {
+        case key :: Nil =>
+          val sliceQuery = HFactory.createSliceQuery(keyspace, bytesSerializer, bytesSerializer, bytesSerializer)
+          sliceQuery.setColumnFamily(columnFamilyName)
+          sliceQuery.setKey(key.bytes)
+          sliceQuery.setRange(
+            fromColumnName.bytes,
+            toColumnName.bytes,
+            rev,
+            maxColumnCount)
+          val columns = sliceQuery.execute().get().getColumns()
+          Iterable(new QueryResult(columns))
 
-  def query(qry: Query): Iterable[QueryResult] = qry.execute(keyspace, columnFamilyName)
+        case _ =>
+          val multigetSliceQuery = HFactory.createMultigetSliceQuery(keyspace, bytesSerializer, bytesSerializer, bytesSerializer)
+          multigetSliceQuery.setColumnFamily(columnFamilyName)
+          multigetSliceQuery.setKeys(keys map (_.bytes))
+          multigetSliceQuery.setRange(
+            fromColumnName.bytes,
+            toColumnName.bytes,
+            rev,
+            maxColumnCount)
+          val rows = multigetSliceQuery.execute().get()
+          rows map { row =>
+            new QueryResult(row.getColumnSlice().getColumns())
+          }
+      }
+    }
+  }
+
+  def select(k: KeyValue) = new Query(Seq(k))
+  def select(ks: KeyValue*) = new Query(ks)
 }

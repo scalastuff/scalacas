@@ -19,46 +19,19 @@ import me.prettyprint.hector.api.beans.HColumn
 import me.prettyprint.hector.api.factory.HFactory
 
 /**
- * Maps objects to SuperColumn.
+ * Maps objects to Column.
  *
- * Provides SuperColumn name and list of columns, representing object properties.
- * Provides also back conversion from list of columns to object instance.
  * Subclass to provide your own mapping to your domain objects of given class.
  * Must be thread-safe.
  *
  * @author Alexander Dvorkovyy
  */
-abstract class Mapper[A <: AnyRef](val prefix: String) {
-  import Serializers._
-  
-  type Column = HColumn[String, Array[Byte]]
+abstract class Mapper[A <: AnyRef] extends Serializers with Keys {
+  type Column = HColumn[Array[Byte], Array[Byte]]
 
-  def name(obj: A): String = {
-    val sb = new StringBuilder(fullPrefix)
-    sb ++= id(obj)
-    sb.result
-  }
-
-  def name[P <: AnyRef](obj: A, parent: P)(implicit mP: Mapper[P]): String = {
-    val sb = new StringBuilder(fullPrefix(parent))
-    sb ++= id(obj)
-    sb.result
-  }
-
-  val fullPrefix = prefix + " "
-
-  def fullPrefix[P <: AnyRef](parent: P)(implicit mP: Mapper[P]): String = {
-    val sb = new StringBuilder(mP.name(parent))
-    sb ++= "/"
-    sb ++= fullPrefix
-    sb.result
-  }
-
-  def id(obj: A): String
-  def objectToColumn(obj: A): Column
-  def columnToObject(column: Column): A
-  def createColumn(name: String, value: Array[Byte]) = {
-	  HFactory.createColumn(name, value, stringSerializer, bytesSerializer).
-	  asInstanceOf[Column]
-  }
+  def objectToColumn(columnKey: Key[A], obj: A) = 
+    HFactory.createColumn(columnKey.bytes, objectToBytes(obj), bytesSerializer, bytesSerializer)
+    
+  def columnToObject(column: Column): A  
+  def objectToBytes(obj: A): Array[Byte]  
 }

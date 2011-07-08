@@ -17,23 +17,25 @@ package org.scalastuff.scalacas
 
 class IndexColumnFamily(_db: Database, _columnFamilyName: String) extends ColumnFamily(_db, _columnFamilyName) {
   implicit val mapper = StringMapper
+  val rowKey = path[String]
+  implicit val columnPath: KeyPath1[String] = path[String]
 
   def findByKey(keyValue: String): Set[String] = {
     for {
-      result <- query(key(keyValue))
+      result <- select(KeyValue(keyValue)).execute()
       ref <- result.filter[String]
     } yield ref
   } toSet
   
   def saveRef(keyValue: String, ref: String) {
-    mutate(write(keyValue, ref))
+    mutate(write(rowKey(keyValue), ref))
   }
   
   def deleteRef(keyValue: String, ref: String) {
-    mutate(delete(keyValue, ref))
+    mutate(delete(rowKey(keyValue), ref))
   }
   
   def deleteKey(keyValue: String) {
-    mutate(deleteRow(keyValue))
+    mutate(deleteRow(rowKey(keyValue)))
   }
 }

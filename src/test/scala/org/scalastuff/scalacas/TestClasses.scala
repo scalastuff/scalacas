@@ -3,27 +3,28 @@ package org.scalastuff.scalacas
 import scala.collection.JavaConversions._
 
 object TestClasses {
+  import Keys._
   import Serializers._
   
-  case class A(id: Int)
-  case class B(id: Int)
-  case class C(id: Int)
+  case class A(id: Int) extends HasIntKey
+  case class B(id: Int) extends HasIntKey
+  case class C(id: Int) extends HasIntKey
 
-  implicit val scmA = new Mapper[A]("A") {
-	  def objectToColumn(obj:A) = throw new UnsupportedOperationException
+  implicit val pathA = "A" :: path[A]
+  implicit val scmA = new Mapper[A] {
+	  def objectToBytes(obj:A) = toBytes(obj.id)
 	  def columnToObject(column: Column) = A(fromBytes[Int](column.getValue))
-	  def id(obj:A) = obj.id.toString
   }
   
-  implicit val scmB = new Mapper[B]("B") {
-	  def objectToColumn(obj:B) = throw new UnsupportedOperationException
+  implicit val pathB = "B" :: path[B]
+  implicit val scmB = new Mapper[B] {
+	  def objectToBytes(obj:B) = toBytes(obj.id)
 	  def columnToObject(column: Column) = B(fromBytes[Int](column.getValue))
-	  def id(obj:B) = obj.id.toString
   }
   
-  implicit val scmC = new Mapper[C]("C") {
-	  def objectToColumn(obj:C) = throw new UnsupportedOperationException
+  implicit val pathC = pathB :: "C" :: path[C]
+  implicit val scmC = new Mapper[C] {
+	  def objectToBytes(obj:C) = toBytes(obj.id)
 	  def columnToObject(column: Column) = C(fromBytes[Int](column.getValue))
-	  def id(obj:C) = obj.id.toString
   }
 }

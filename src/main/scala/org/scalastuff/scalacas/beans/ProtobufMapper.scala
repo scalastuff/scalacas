@@ -15,7 +15,7 @@
  */
 package org.scalastuff.scalacas.beans
 
-import org.scalastuff.scalacas.{ Mapper, HasIdSupport, HasId }
+import org.scalastuff.scalacas.{Mapper, Key, HasKey}
 import org.scalastuff.proto.Preamble._
 import org.scalastuff.proto._
 
@@ -24,16 +24,13 @@ import org.scalastuff.proto._
  *
  * @author Alexander Dvorkovyy
  */
-class ProtobufMapper[A <: HasId](prefix: String)(implicit mf: Manifest[A]) extends AbstractProtobufMapper[A](prefix) with HasIdSupport[A]
+class ProtobufMapper[A <: HasKey]()(implicit mf: Manifest[A]) extends AbstractProtobufMapper[A]
 
-abstract class AbstractProtobufMapper[A <: AnyRef](prefix: String)(implicit mf: Manifest[A]) extends Mapper[A](prefix) {
+abstract class AbstractProtobufMapper[A <: AnyRef]()(implicit mf: Manifest[A]) extends Mapper[A] {
   val reader = readerOf[A]
   val writer = writerOf[A]
   val format = ProtobufFormat
-
-  def objectToColumn(obj: A): Column = {
-    createColumn(name(obj), writer.toByteArray(obj, format))
-  }
-
+  
+  def objectToBytes(obj: A) = writer.toByteArray(obj, format)
   def columnToObject(column: Column): A = reader.readFrom(column.getValue, ProtobufFormat)
 }

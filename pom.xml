@@ -84,6 +84,11 @@
 	</build>
 	<dependencies>
 		<dependency>
+			<groupId>org.scala-lang</groupId>
+			<artifactId>scala-library</artifactId>
+			<version>2.9.0-1</version>
+		</dependency>
+		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
 			<version>4.8</version>
@@ -91,8 +96,8 @@
 		</dependency>
 		<dependency>
 			<groupId>org.clapper</groupId>
-			<artifactId>grizzled-slf4j_2.8.1</artifactId>
-			<version>0.4</version>
+			<artifactId>grizzled-slf4j_2.9.0</artifactId>
+			<version>0.5</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -102,7 +107,7 @@
 		<dependency>
 			<groupId>org.scalastuff</groupId>
 			<artifactId>scalabeans</artifactId>
-			<version>0.1</version>
+			<version>0.2-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>com.dyuproject.protostuff</groupId>
@@ -122,6 +127,11 @@
 			<version>0.7.0-29</version>
 			<type>jar</type>
 		</dependency>
+		<dependency>
+			<groupId>org.scalaz</groupId>
+			<artifactId>scalaz-core_2.9.0-1</artifactId>
+			<version>6.0.1</version>
+		</dependency>
 	</dependencies>
 	<repositories>
 		<repository>
@@ -129,10 +139,12 @@
 			<url>http://scala-tools.org/repo-releases/</url>
 		</repository>
 		<repository>
-			<id>protostuff-repo</id>
-			<name>protostuff-repo</name>
-			<url>http://protostuff.googlecode.com/svn/repos/maven2</url>
-		</repository>
+			<id>OSS Sonatype Snapshots</id>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+			<releases>
+				<enabled>false</enabled>
+			</releases>			
+		</repository>			
 	</repositories>
 	<distributionManagement>
 		<repository>

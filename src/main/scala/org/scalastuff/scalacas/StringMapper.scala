@@ -19,9 +19,7 @@ package org.scalastuff.scalacas
  * This mapper is useful for building indexes, where each row
  * contains only references in the form of string keys
  */
-object StringMapper extends Mapper[String]("") {
-  override val fullPrefix = ""
-  def id(ref: String) = ref
-  def objectToColumn(ref: String) = createColumn("0", Array[Byte]())
-  def columnToObject(column: Column): String = column.getName
+object StringMapper extends Mapper[String] {  
+  def objectToBytes(ref: String) = Array[Byte]() // actual string will be stored in the column name
+  def columnToObject(column: Column): String = fromBytes[String](column.getName)
 }

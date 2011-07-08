@@ -18,30 +18,14 @@ package org.scalastuff.scalacas
 import scala.collection.JavaConversions._
 import me.prettyprint.hector.api.beans.HColumn
 
-class QueryResult(row: Iterable[HColumn[String, Array[Byte]]]) {
-  def filter[O <: AnyRef](implicit mapper: Mapper[O]): Iterable[O] = {
-    filterPrefix(mapper.fullPrefix, mapper)
+class QueryResult(row: Iterable[HColumn[Array[Byte], Array[Byte]]]) {
+  def filter[O <: AnyRef](implicit mapper: Mapper[O], keyPath: KeyPath1[O]): Iterable[O] = {
+    for (col <- row if col.getName startsWith keyPath.prefix.bytes)
+      yield mapper.columnToObject(col)
   }
   
-  def filter[O <: AnyRef, P <: AnyRef](parent:P)(implicit mapper: Mapper[O], mapperP:Mapper[P]): Iterable[O] = {
-    filterPrefix(mapper.fullPrefix(parent), mapper)
-  }
-  
-  def find[O <: AnyRef](implicit mapper: Mapper[O]): Option[O] = {
-    findPrefix(mapper.fullPrefix, mapper)
-  }
-  
-  def find[O <: AnyRef, P <: AnyRef](parent:P)(implicit mapper: Mapper[O], mapperP:Mapper[P]): Option[O] = {
-    findPrefix(mapper.fullPrefix(parent), mapper)
-  }
-  
-  private def filterPrefix[O <: AnyRef](fullPrefix:String, mapper: Mapper[O]) = {
-	for (col <- row if col.getName startsWith fullPrefix)
-      yield mapper.columnToObject(col)  
-  }
-  
-  private def findPrefix[O <: AnyRef](fullPrefix:String, mapper: Mapper[O]) = {
-	for (col <- row find { col => col.getName startsWith fullPrefix } )
+  def find[O <: AnyRef](implicit mapper: Mapper[O], keyPath: KeyPath1[O]): Option[O] = {
+    for (col <- row find { col => col.getName startsWith keyPath.prefix.bytes } )
       yield mapper.columnToObject(col)
   }
 }

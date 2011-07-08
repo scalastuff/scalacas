@@ -3,34 +3,35 @@ package beans
 
 import org.junit.Test
 import org.junit.Assert._
+import Serializers._
 
-class ReflectionTest extends HasId {
-  var i: Int = 1
+class ReflectionTest extends HasIntKey {
+  var id: Int = 1
   var i2: Integer = 2
   var s: String = "whatever"
   var l: Long = 3
   var bd: BigDecimal = 2.33
-  def id = i.toString
 }
 
-class ReflectionPerformanceTest {
+class ReflectionPerformanceTest extends Keys {
 
   @Test
   def testMappingPerformance() {
 
-    val protoMapper = new ProtobufMapper[ReflectionTest]("")
+    val protoMapper = new ProtobufMapper[ReflectionTest]()
 
     val rt = new ReflectionTest
-    rt.i = 10
+    rt.id = 10
     rt.i2 = 20
     rt.s = "xxx aaa7"
     rt.l = 30
     rt.bd = 45.78
 
-    val pscl = protoMapper.objectToColumn(rt)
+    val columnKey = path[ReflectionTest]
+    val pscl = protoMapper.objectToColumn(columnKey(rt), rt)
     val obj = protoMapper.columnToObject(pscl)
 
-    assertEquals(rt.i, obj.i)
+    assertEquals(rt.id, obj.id)
     assertEquals(rt.i2, obj.i2)
     assertEquals(rt.s, obj.s)
     assertEquals(rt.l, obj.l)

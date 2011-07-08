@@ -19,50 +19,49 @@ import scala.collection.JavaConversions._
 import me.prettyprint.hector.api.mutation.{ Mutator => HectorMutator }
 import me.prettyprint.hector.api.factory.HFactory
 
-trait Mutators { self: ColumnFamily =>
-  import Serializers._
+trait Mutators extends Serializers { self: ColumnFamily =>
 
-  type Mutator = HectorMutator[String]
+  type Mutator = HectorMutator[Array[Byte]]  
+
+  protected def createMutator() = HFactory.createMutator(self.keyspace, bytesSerializer)
+
+  def write[A <: AnyRef](rowKey: KeyValue, obj: A)(implicit mapper: Mapper[A], keyPath: KeyPath1[A]) = (mutator: Mutator, cf: ColumnFamily) => {
+    mutator.addInsertion(rowKey.bytes, cf.columnFamilyName, mapper.objectToColumn(keyPath(obj), obj))
+  }
   
-  protected def createMutator() = HFactory.createMutator(self.keyspace, stringSerializer)
-
-  def write[O <: AnyRef](key: String, obj: O)(implicit mapperO: Mapper[O]) = (mutator: Mutator, cf: ColumnFamily) => {
-    mutator.addInsertion(key, cf.columnFamilyName, mapperO.objectToColumn(obj))
+  def write[A <: AnyRef](rowKey: KeyValue, columnKey: Key[A], obj: A)(implicit mapper: Mapper[A]) = (mutator: Mutator, cf: ColumnFamily) => {
+    mutator.addInsertion(rowKey.bytes, cf.columnFamilyName, mapper.objectToColumn(columnKey, obj))
   }
 
-  def write[O <: AnyRef, P <: AnyRef](key: String, obj: O, parent: P)(implicit mapperO: Mapper[O], mapperP: Mapper[P]) = (mutator: Mutator, cf: ColumnFamily) => {
-    mutator.addInsertion(key, cf.columnFamilyName, mapperO.objectToColumn(obj))
+  def writeAll[A <: AnyRef](rowKey: KeyValue, objs: Iterable[A])(implicit mapper: Mapper[A], keyPath: KeyPath1[A]) = (mutator: Mutator, cf: ColumnFamily) => {
+    for (obj <- objs)
+      mutator.addInsertion(rowKey.bytes, cf.columnFamilyName, mapper.objectToColumn(keyPath(obj), obj))
   }
 
-  def writeAll[O <: AnyRef](key: String, objs: Iterable[O])(implicit mapperO: Mapper[O]) = (mutator: Mutator, cf: ColumnFamily) => {
-    objs foreach { obj => write(key, obj) }
+  def delete[A <: AnyRef](rowKey: KeyValue, obj: A)(implicit keyPath: KeyPath1[A]) = (mutator: Mutator, cf: ColumnFamily) => {
+    mutator.addDeletion(rowKey.bytes, cf.columnFamilyName, keyPath(obj).bytes, bytesSerializer)
+  }
+  
+  def delete[A <: AnyRef](rowKey: KeyValue, columnKey: Key[A]) = (mutator: Mutator, cf: ColumnFamily) => {
+    mutator.addDeletion(rowKey.bytes, cf.columnFamilyName, columnKey.bytes, bytesSerializer)
   }
 
-  def writeAll[O <: AnyRef, P <: AnyRef](key: String, objs: Iterable[O], parent: P)(implicit mapperO: Mapper[O], mapperP: Mapper[P]) = (mutator: Mutator, cf: ColumnFamily) => {
-    objs foreach { obj => write(key, obj, parent) }
+  def deleteAll[A <: AnyRef](rowKey: KeyValue, objs: Iterable[A])(implicit keyPath: KeyPath1[A]) = (mutator: Mutator, cf: ColumnFamily) => {
+    for (obj <- objs)
+      mutator.addDeletion(rowKey.bytes, cf.columnFamilyName, keyPath(obj).bytes, bytesSerializer)
+  }
+  
+  def deleteAll[A <: AnyRef](rowKey: KeyValue, columnKeys: Iterable[Key[A]]) = (mutator: Mutator, cf: ColumnFamily) => {
+    for (columnKey <- columnKeys)
+      mutator.addDeletion(rowKey.bytes, cf.columnFamilyName, columnKey.bytes, bytesSerializer)
   }
 
-  def delete[O <: AnyRef](key: String, obj: O)(implicit mapperO: Mapper[O]) = (mutator: Mutator, cf: ColumnFamily) => {
-    mutator.addDeletion(key, cf.columnFamilyName, mapperO.name(obj), stringSerializer)
+  def deleteRow(rowKey: KeyValue) = (mutator: Mutator, cf: ColumnFamily) => {
+    mutator.addDeletion(rowKey.bytes, cf.columnFamilyName)
   }
 
-  def delete[O <: AnyRef, P <: AnyRef](key: String, obj: O, parent: P)(implicit mapperO: Mapper[O], mapperP: Mapper[P]) = (mutator: Mutator, cf: ColumnFamily) => {
-    mutator.addDeletion(key, cf.columnFamilyName, mapperO.name(obj, parent), stringSerializer)
-  }
-
-  def deleteAll[O <: AnyRef](key: String, objs: Iterable[O])(implicit mapperO: Mapper[O]) = (mutator: Mutator, cf: ColumnFamily) => {
-    objs foreach { obj => delete(key, obj) }
-  }
-
-  def deleteAll[O <: AnyRef, P <: AnyRef](key: String, objs: Iterable[O], parent: P)(implicit mapperO: Mapper[O], mapperP: Mapper[P]) = (mutator: Mutator, cf: ColumnFamily) => {
-    objs foreach { obj => delete(key, obj, parent) }
-  }
-
-  def deleteRow(key: String) = (mutator: Mutator, cf: ColumnFamily) => {
-    mutator.addDeletion(key, cf.columnFamilyName)
-  }
-
-  def deleteRows(keys: String*) = (mutator: Mutator, cf: ColumnFamily) => {
-    keys foreach deleteRow
+  def deleteRows(keys: KeyValue*) = (mutator: Mutator, cf: ColumnFamily) => {
+    for (key <- keys)
+      mutator.addDeletion(key.bytes, cf.columnFamilyName)
   }
 }

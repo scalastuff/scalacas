@@ -19,19 +19,47 @@ import java.nio.ByteBuffer
 import me.prettyprint.cassandra.serializers._
 import me.prettyprint.hector.api.Serializer
 
-object Serializers {
-  implicit val stringSerializer = StringSerializer.get()
-  implicit val bytesSerializer = BytesArraySerializer.get()
-  implicit val shortSerializer = ShortSerializer.get()
-  implicit val intSerializer = new AbstractSerializer[Int] {
-	val wrapped = IntegerSerializer.get()
-	
-	override def toByteBuffer(i: Int) = wrapped.toByteBuffer(i)
-	override def fromByteBuffer(buffer: ByteBuffer): Int = wrapped.fromByteBuffer(buffer).intValue
-	override def fromBytes(buffer: Array[Byte]): Int = wrapped.fromBytes(buffer).intValue
-  }
-  implicit val longSerializer = LongSerializer.get()
+trait Serializers {
+  type Serializer[A] = me.prettyprint.hector.api.Serializer[A]
   
+  implicit val stringSerializer = StringSerializer.get()
+  val bytesSerializer = BytesArraySerializer.get()
+  
+  implicit val byteSerializer = new AbstractSerializer[Byte] {
+    override def toByteBuffer(v: Byte) = {
+      val bb = ByteBuffer.allocate(1)
+      bb.put(v)
+      bb.rewind()
+      bb
+    }
+    override def fromByteBuffer(buffer: ByteBuffer): Byte = buffer.get()
+    override def fromBytes(buffer: Array[Byte]): Byte = buffer(0)
+  }
+  
+  implicit val shortSerializer = new AbstractSerializer[Short] {
+    val wrapped = ShortSerializer.get()
+
+    override def toByteBuffer(v: Short) = wrapped.toByteBuffer(v)
+    override def fromByteBuffer(buffer: ByteBuffer): Short = wrapped.fromByteBuffer(buffer).shortValue
+    override def fromBytes(buffer: Array[Byte]): Short = wrapped.fromBytes(buffer).shortValue
+  }
+  implicit val intSerializer = new AbstractSerializer[Int] {
+    val wrapped = IntegerSerializer.get()
+
+    override def toByteBuffer(i: Int) = wrapped.toByteBuffer(i)
+    override def fromByteBuffer(buffer: ByteBuffer): Int = wrapped.fromByteBuffer(buffer).intValue
+    override def fromBytes(buffer: Array[Byte]): Int = wrapped.fromBytes(buffer).intValue
+  }
+  implicit val longSerializer = new AbstractSerializer[Long] {
+    val wrapped = LongSerializer.get()
+
+    override def toByteBuffer(v: Long) = wrapped.toByteBuffer(v)
+    override def fromByteBuffer(buffer: ByteBuffer): Long = wrapped.fromByteBuffer(buffer).longValue
+    override def fromBytes(buffer: Array[Byte]): Long = wrapped.fromBytes(buffer).longValue
+  }
+
   def toBytes[A](a: A)(implicit s: Serializer[A]): Array[Byte] = s.toBytes(a)
   def fromBytes[A](buffer: Array[Byte])(implicit s: Serializer[A]): A = s.fromBytes(buffer)
 }
+
+object Serializers extends Serializers
