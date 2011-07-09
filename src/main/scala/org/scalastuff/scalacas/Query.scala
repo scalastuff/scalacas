@@ -1,10 +1,10 @@
 package org.scalastuff.scalacas
 
-import Serializers._
+import org.scalastuff.scalacas.keys._
 
 case class Query(keys: Seq[KeyValue],
-  fromColumnName: KeyValue = SyntheticKeyValue.empty,
-  toColumnName: KeyValue = SyntheticKeyValue.empty,
+  fromColumnName: KeyValue = KeyValue.empty,
+  toColumnName: KeyValue = KeyValue.empty,
   maxColumnCount: Int = Integer.MAX_VALUE,
   rev: Boolean = false) {
   

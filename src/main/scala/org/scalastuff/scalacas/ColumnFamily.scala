@@ -20,6 +20,8 @@ import me.prettyprint.cassandra.service.ThriftCfDef
 import me.prettyprint.cassandra.model.QuorumAllConsistencyLevelPolicy
 import me.prettyprint.hector.api.factory.HFactory
 import me.prettyprint.hector.api.mutation.Mutator
+import org.scalastuff.scalacas.keys._
+import Serializers._
 
 class ColumnFamily(val db: Database, val columnFamilyName: String) extends Mutators with Keys {
   if (!db.keyspaceDef.getCfDefs.exists(_.getName == columnFamilyName)) {
@@ -41,7 +43,7 @@ class ColumnFamily(val db: Database, val columnFamilyName: String) extends Mutat
   def truncate() {
     db.cluster.truncate(db.keyspaceName, columnFamilyName)
   }
-
+  
   implicit def query2exectable(q: Query) = new {
     def execute() = {
       import q._

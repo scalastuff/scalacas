@@ -19,11 +19,11 @@ import java.nio.ByteBuffer
 import me.prettyprint.cassandra.serializers._
 import me.prettyprint.hector.api.Serializer
 
-trait Serializers {
-  type Serializer[A] = me.prettyprint.hector.api.Serializer[A]
-  
-  implicit val stringSerializer = StringSerializer.get()
+object Serializers {
   val bytesSerializer = BytesArraySerializer.get()
+  implicit val keyValueSerializer = keys.KeyValue.Serializer
+
+  implicit val stringSerializer = StringSerializer.get()
   
   implicit val byteSerializer = new AbstractSerializer[Byte] {
     override def toByteBuffer(v: Byte) = {
@@ -57,11 +57,7 @@ trait Serializers {
     override def fromByteBuffer(buffer: ByteBuffer): Long = wrapped.fromByteBuffer(buffer).longValue
     override def fromBytes(buffer: Array[Byte]): Long = wrapped.fromBytes(buffer).longValue
   }
-  
-  implicit val keyValueSerializer = KeyValue.Serializer
 
   def toBytes[A](a: A)(implicit s: Serializer[A]): Array[Byte] = s.toBytes(a)
   def fromBytes[A](buffer: Array[Byte])(implicit s: Serializer[A]): A = s.fromBytes(buffer)
 }
-
-object Serializers extends Serializers

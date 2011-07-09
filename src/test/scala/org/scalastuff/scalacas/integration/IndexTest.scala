@@ -1,4 +1,4 @@
-package org.scalastuff.scalacas.integration
+package org.scalastuff.scalacas.indexes.integration
 
 import org.junit.Assert._
 import org.junit.{ Test, Ignore }

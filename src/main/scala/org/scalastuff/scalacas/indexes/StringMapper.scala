@@ -14,6 +14,10 @@
  *    limitations under the License.
  */
 package org.scalastuff.scalacas
+package indexes
+
+import org.scalastuff.scalacas.keys._
+import Serializers._
 
 /**
  * This mapper is useful for building indexes, where each row

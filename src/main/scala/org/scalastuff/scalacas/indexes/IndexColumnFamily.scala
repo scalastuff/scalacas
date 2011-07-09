@@ -14,6 +14,8 @@
  *    limitations under the License.
  */
 package org.scalastuff.scalacas
+package indexes
+import org.scalastuff.scalacas.keys._
 
 class IndexColumnFamily(_db: Database, _columnFamilyName: String) extends ColumnFamily(_db, _columnFamilyName) {
   implicit val mapper = StringMapper

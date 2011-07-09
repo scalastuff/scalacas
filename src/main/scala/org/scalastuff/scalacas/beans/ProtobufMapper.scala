@@ -13,9 +13,9 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-package org.scalastuff.scalacas.beans
+package org.scalastuff.scalacas
+package beans
 
-import org.scalastuff.scalacas.{Mapper, Key, HasKey}
 import org.scalastuff.proto.Preamble._
 import org.scalastuff.proto._
 

@@ -1,5 +1,5 @@
 package org.scalastuff.scalacas
-package integration
+package indexes.integration
 
 import me.prettyprint.hector.api.factory.HFactory
 

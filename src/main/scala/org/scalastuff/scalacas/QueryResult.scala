@@ -17,15 +17,16 @@ package org.scalastuff.scalacas
 
 import scala.collection.JavaConversions._
 import me.prettyprint.hector.api.beans.HColumn
+import org.scalastuff.scalacas.keys._
 
 class QueryResult(row: Iterable[HColumn[KeyValue, Array[Byte]]]) {
   def filter[A <: AnyRef](implicit mapper: Mapper[A], keyPath: KeyPath1[A]): Iterable[A] = {
-    for (col <- row if keyPath.prefix.isPrefixOf(col.getName) )
+    for (col <- row if keyPath.isPathOf(col.getName) )
       yield mapper.columnToObject(col)
   }
   
   def find[A <: AnyRef](implicit mapper: Mapper[A], keyPath: KeyPath1[A]): Option[A] = {
-    for (col <- row find { col => keyPath.prefix.isPrefixOf(col.getName) } )
+    for (col <- row find { col => keyPath.isPathOf(col.getName) } )
       yield mapper.columnToObject(col)
   }
 }

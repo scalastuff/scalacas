@@ -1,30 +1,39 @@
 package org.scalastuff.scalacas
 
 import scala.collection.JavaConversions._
+import keys._
+import Keys._
+import Serializers._
 
 object TestClasses {
-  import Keys._
-  import Serializers._
   
-  case class A(id: Int) extends HasIntKey
-  case class B(id: Int) extends HasIntKey
-  case class C(id: Int) extends HasIntKey
+  case class BeanA(id: Int)
+  case class BeanB(id: String)
+  case class BeanC(id: String)
+  
+  implicit val IdentifyBeanA = Identify[BeanA, Int](_.id)
+  implicit val IdentifyBeanB = Identify[BeanB, String](_.id)
+  implicit val IdentifyBeanC = Identify[BeanC, String](_.id)
+}
 
-  implicit val pathA = "A" :: path[A]
-  implicit val scmA = new Mapper[A] {
-	  def objectToBytes(obj:A) = toBytes(obj.id)
-	  def columnToObject(column: Column) = A(fromBytes[Int](column.getValue))
+object TestClassMappers {
+  import TestClasses._
+  
+  implicit val pathA = "A" :: path[BeanA]
+  implicit val scmA = new Mapper[BeanA] {
+	  def objectToBytes(obj:BeanA) = toBytes(obj.id)
+	  def columnToObject(column: Column) = BeanA(fromBytes[Int](column.getValue))
   }
   
-  implicit val pathB = "B" :: path[B]
-  implicit val scmB = new Mapper[B] {
-	  def objectToBytes(obj:B) = toBytes(obj.id)
-	  def columnToObject(column: Column) = B(fromBytes[Int](column.getValue))
+  implicit val pathB = "B" :: path[BeanB]
+  implicit val scmB = new Mapper[BeanB] {
+	  def objectToBytes(obj:BeanB) = toBytes(obj.id)
+	  def columnToObject(column: Column) = BeanB(fromBytes[String](column.getValue))
   }
   
-  implicit val pathC = pathB :: "C" :: path[C]
-  implicit val scmC = new Mapper[C] {
-	  def objectToBytes(obj:C) = toBytes(obj.id)
-	  def columnToObject(column: Column) = C(fromBytes[Int](column.getValue))
+  implicit val pathC = pathB :: "C" :: path[BeanC]
+  implicit val scmC = new Mapper[BeanC] {
+	  def objectToBytes(obj:BeanC) = toBytes(obj.id)
+	  def columnToObject(column: Column) = BeanC(fromBytes[String](column.getValue))
   }
 }

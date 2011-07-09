@@ -4,8 +4,10 @@ package beans
 import org.junit.Test
 import org.junit.Assert._
 import Serializers._
+import keys._
+import Keys._
 
-class ReflectionTest extends HasIntKey {
+class ReflectionTest {
   var id: Int = 1
   var i2: Integer = 2
   var s: String = "whatever"
@@ -13,7 +15,8 @@ class ReflectionTest extends HasIntKey {
   var bd: BigDecimal = 2.33
 }
 
-class ReflectionPerformanceTest extends Keys {
+class ReflectionPerformanceTest {
+  implicit val IdentifyReflectionTest = Identify[ReflectionTest, Int](_.id)
 
   @Test
   def testMappingPerformance() {

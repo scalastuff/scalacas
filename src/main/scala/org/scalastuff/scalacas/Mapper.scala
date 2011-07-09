@@ -17,6 +17,8 @@ package org.scalastuff.scalacas
 
 import me.prettyprint.hector.api.beans.HColumn
 import me.prettyprint.hector.api.factory.HFactory
+import org.scalastuff.scalacas.keys._
+import Serializers._
 
 /**
  * Maps objects to Column.
@@ -26,11 +28,12 @@ import me.prettyprint.hector.api.factory.HFactory
  *
  * @author Alexander Dvorkovyy
  */
-abstract class Mapper[A <: AnyRef] extends Serializers with Keys {
+abstract class Mapper[A <: AnyRef] extends Keys {
   type Column = HColumn[KeyValue, Array[Byte]]
+  
 
   def objectToColumn(columnKey: Key[A], obj: A) = 
-    HFactory.createColumn(columnKey, objectToBytes(obj), keyValueSerializer, bytesSerializer)
+    HFactory.createColumn(columnKey.value, objectToBytes(obj), keyValueSerializer, bytesSerializer)
     
   def columnToObject(column: Column): A  
   def objectToBytes(obj: A): Array[Byte]  

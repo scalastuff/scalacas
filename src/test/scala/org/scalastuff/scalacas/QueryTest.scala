@@ -2,14 +2,15 @@ package org.scalastuff.scalacas
 
 import org.junit.Test
 import org.junit.Assert._
+import keys._
+import Keys._
 
-class QueryTest extends Keys {
+class QueryTest {
   import TestClasses._
-  import Serializers._
   
   val rowKey = path[Int]
-  val columnKeyA = "A" :: path[A]
-  val columnKeyC = columnKeyA :: "C" :: path[C]
+  val columnKeyA = "A" :: path[BeanA]
+  val columnKeyC = columnKeyA :: "C" :: path[BeanC]
 
   @Test
   def testObjectOfClass() {
@@ -26,13 +27,13 @@ class QueryTest extends Keys {
 
   @Test
   def testStartWith() {
-    val qry = Query(List(rowKey(1))) from columnKeyA(A(1))
+    val qry = Query(List(rowKey(1))) from columnKeyA(BeanA(1))
     assertEquals(Some("A 1"), qry.fromColumnName)
   }
 
   @Test
   def testStartWithParent() {
-    val qry = Query(List(rowKey(1))) from columnKeyC(A(1), C(1))
+    val qry = Query(List(rowKey(1))) from columnKeyC(BeanA(1), BeanC("1"))
     assertEquals(Some("C 1/A 1"), qry.fromColumnName)
   }
 
@@ -44,13 +45,13 @@ class QueryTest extends Keys {
 
   @Test
   def testEndWith() {
-    val qry = Query(List(rowKey(1))) to columnKeyA(A(10))
+    val qry = Query(List(rowKey(1))) to columnKeyA(BeanA(10))
     assertEquals(Some("A 10"), qry.toColumnName)
   }
 
   @Test
   def testEndWithParent() {
-    val qry = Query(List(rowKey(1))) to columnKeyC(A(10), C(1))
+    val qry = Query(List(rowKey(1))) to columnKeyC(BeanA(10), BeanC("1"))
     assertEquals(Some("C 1/A 10"), qry.toColumnName)
   }
 

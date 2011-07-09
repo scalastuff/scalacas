@@ -18,8 +18,10 @@ package org.scalastuff.scalacas
 import scala.collection.JavaConversions._
 import me.prettyprint.hector.api.mutation.{ Mutator => HectorMutator }
 import me.prettyprint.hector.api.factory.HFactory
+import org.scalastuff.scalacas.keys._
+import Serializers._
 
-trait Mutators extends Serializers { self: ColumnFamily =>
+trait Mutators { self: ColumnFamily =>
 
   type Mutator = HectorMutator[KeyValue]  
 
@@ -39,21 +41,21 @@ trait Mutators extends Serializers { self: ColumnFamily =>
   }
 
   def delete[A <: AnyRef](rowKey: KeyValue, obj: A)(implicit keyPath: KeyPath1[A]) = (mutator: Mutator, cf: ColumnFamily) => {
-    mutator.addDeletion(rowKey, cf.columnFamilyName, keyPath(obj), keyValueSerializer)
+    mutator.addDeletion(rowKey, cf.columnFamilyName, keyPath(obj).value, keyValueSerializer)
   }
   
   def delete[A <: AnyRef](rowKey: KeyValue, columnKey: Key[A]) = (mutator: Mutator, cf: ColumnFamily) => {
-    mutator.addDeletion(rowKey, cf.columnFamilyName, columnKey, keyValueSerializer)
+    mutator.addDeletion(rowKey, cf.columnFamilyName, columnKey.value, keyValueSerializer)
   }
 
   def deleteAll[A <: AnyRef](rowKey: KeyValue, objs: Iterable[A])(implicit keyPath: KeyPath1[A]) = (mutator: Mutator, cf: ColumnFamily) => {
     for (obj <- objs)
-      mutator.addDeletion(rowKey, cf.columnFamilyName, keyPath(obj), keyValueSerializer)
+      mutator.addDeletion(rowKey, cf.columnFamilyName, keyPath(obj).value, keyValueSerializer)
   }
   
   def deleteAll[A <: AnyRef](rowKey: KeyValue, columnKeys: Iterable[Key[A]]) = (mutator: Mutator, cf: ColumnFamily) => {
     for (columnKey <- columnKeys)
-      mutator.addDeletion(rowKey, cf.columnFamilyName, columnKey, keyValueSerializer)
+      mutator.addDeletion(rowKey, cf.columnFamilyName, columnKey.value, keyValueSerializer)
   }
 
   def deleteRow(rowKey: KeyValue) = (mutator: Mutator, cf: ColumnFamily) => {
