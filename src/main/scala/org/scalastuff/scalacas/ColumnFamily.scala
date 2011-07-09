@@ -47,24 +47,24 @@ class ColumnFamily(val db: Database, val columnFamilyName: String) extends Mutat
       import q._
       keys match {
         case key :: Nil =>
-          val sliceQuery = HFactory.createSliceQuery(keyspace, bytesSerializer, bytesSerializer, bytesSerializer)
+          val sliceQuery = HFactory.createSliceQuery(keyspace, keyValueSerializer, keyValueSerializer, bytesSerializer)
           sliceQuery.setColumnFamily(columnFamilyName)
-          sliceQuery.setKey(key.bytes)
+          sliceQuery.setKey(key)
           sliceQuery.setRange(
-            fromColumnName.bytes,
-            toColumnName.bytes,
+            fromColumnName,
+            toColumnName,
             rev,
             maxColumnCount)
           val columns = sliceQuery.execute().get().getColumns()
           Iterable(new QueryResult(columns))
 
         case _ =>
-          val multigetSliceQuery = HFactory.createMultigetSliceQuery(keyspace, bytesSerializer, bytesSerializer, bytesSerializer)
+          val multigetSliceQuery = HFactory.createMultigetSliceQuery(keyspace, keyValueSerializer, keyValueSerializer, bytesSerializer)
           multigetSliceQuery.setColumnFamily(columnFamilyName)
-          multigetSliceQuery.setKeys(keys map (_.bytes))
+          multigetSliceQuery.setKeys(keys)
           multigetSliceQuery.setRange(
-            fromColumnName.bytes,
-            toColumnName.bytes,
+            fromColumnName,
+            toColumnName,
             rev,
             maxColumnCount)
           val rows = multigetSliceQuery.execute().get()

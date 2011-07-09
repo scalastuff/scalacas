@@ -2,35 +2,53 @@ package org.scalastuff.scalacas
 import java.nio.ByteBuffer
 import Serializers._
 import java.util.Arrays
+import me.prettyprint.cassandra.serializers.AbstractSerializer
 
 /**
  * Value of entity key.
  *
  * Encapsulates byte array. Byte arrays are never changed in place, new copy is created when necessary.
  */
-class KeyValue(val bytes: Array[Byte]) {
-  def append(other: KeyValue): KeyValue = {
-    if (other.bytes.length == 0) this
-    else {
-      val newArray = Arrays.copyOf(bytes, bytes.length + other.bytes.length + 1)
-      newArray(bytes.length) = 0 // delimiter
-      System.arraycopy(other.bytes, 0, newArray, bytes.length + 1, other.bytes.length)
-      new KeyValue(newArray)
+abstract class KeyValue {
+  def bytes: Array[Byte]
+  
+  override def equals(other: Any) = other match {
+    case otherKeyValue: KeyValue => bytes sameElements otherKeyValue.bytes
+    case _ => false
+  }
+  
+  override def hashCode() = bytes.foldLeft(0) { (sum: Int, b: Byte) => (sum + b) & 0xdfffffff }
+
+  override def toString = bytes map ("%02x".format(_)) mkString ("[", ",", "]")
+}
+
+object KeyValue {
+ 
+  object Serializer extends AbstractSerializer[KeyValue] {
+    override def toByteBuffer(v: KeyValue) = {
+      if (v != null) null
+      else ByteBuffer.wrap(v.bytes)
+    }
+    override def fromByteBuffer(buffer: ByteBuffer): KeyValue = {
+      if (buffer == null) {
+        return null
+      } else {
+        val bytes = Array.ofDim[Byte](buffer.remaining())
+        buffer.get(bytes, 0, bytes.length);
+        new DeserializedKeyValue(bytes)
+      }
     }
   }
+}
 
-  /**
-   * Returns new KeyValue instance with given byte appended at the end of the byte array
-   */
-  def append(last: Byte): KeyValue = {
-    val newArray = Arrays.copyOf(bytes, bytes.length + 1)
-    newArray(bytes.length) = last
-    new KeyValue(newArray)
-  }
+class DeserializedKeyValue(val bytes: Array[Byte]) extends KeyValue
 
-  def append(last: Int): KeyValue = append(last.asInstanceOf[Byte])
-
-  def isPrefixOf(otherBytes: Array[Byte]): Boolean = {
+sealed abstract class SyntheticKeyValue extends KeyValue {
+  def append(other: SyntheticKeyValue): SyntheticKeyValue
+  
+  // FIXME: totally broken
+  def isPrefixOf(other: KeyValue): Boolean = {
+    val otherBytes = other.bytes
     if (otherBytes.length < bytes.length) return false
     var i = 0
     while (i < bytes.length) {
@@ -41,23 +59,62 @@ class KeyValue(val bytes: Array[Byte]) {
     true
   }
 
-  override def equals(other: Any) = other match {
-    case otherKeyValue: KeyValue => bytes sameElements otherKeyValue.bytes
-    case _ => false
-  }
-
-  override def hashCode() = bytes.foldLeft(0) { (sum: Int, b: Byte) => (sum + b) & 0xffffff }
-
-  override def toString = bytes map ("%02x".format(_)) mkString ("[", ",", "]")
+  protected def parts: Vector[Array[Byte]]
 }
 
-object KeyValue {
-  val empty = new KeyValue(Array.ofDim[Byte](0)) {
-    // little optimization
-    override def append(other: KeyValue) = other
+object SyntheticKeyValue {
+  
+  def apply[A](a: A)(implicit s: Serializer[A]): SyntheticKeyValue = new OneKeyValue(s.toBytes(a))
+
+  object empty extends SyntheticKeyValue {
+    val bytes = Array[Byte]()
+    def append(other: SyntheticKeyValue) = other
+
+    protected val parts = Vector.empty[Array[Byte]]
   }
 
-  def apply[K: Serializer](k: K) = new KeyValue(toBytes(k))
+  private class OneKeyValue(_bytes: Array[Byte]) extends SyntheticKeyValue {
+    val bytes = _bytes
+    def append(other: SyntheticKeyValue) = new CompoundKeyValue(this, other)
+
+    protected val parts = Vector(_bytes)
+  }
+
+  private class CompoundKeyValue(component1: SyntheticKeyValue, component2: SyntheticKeyValue) extends SyntheticKeyValue {
+    lazy val bytes = {
+      if (parts.isEmpty) {
+        empty.bytes
+      } else if (parts.size == 1) {
+        parts.head
+      } else {
+        val bytesLength = parts.foldLeft(0)(_ + _.length + 1)
+        val buffer = ByteBuffer.allocate(bytesLength)
+
+        var remaining = parts
+        var count = 1
+        while (remaining.size > 1) {
+          buffer.put(remaining.head)
+          buffer.put(0.asInstanceOf[Byte])
+
+          remaining = remaining.tail
+          count = count + 1
+        }
+
+        buffer.put(remaining.head)
+        buffer.put(count.asInstanceOf[Byte])
+
+        buffer.array()
+      }
+    }
+
+    def append(other: SyntheticKeyValue) = new CompoundKeyValue(this, other)
+
+    protected val parts = component1.parts ++ component2.parts
+  }
+}
+
+class Key[T](keyValue: KeyValue) extends KeyValue {
+  def bytes = keyValue.bytes
 }
 
 /**
@@ -70,25 +127,23 @@ object KeyValue {
  * @see [[HasLongKey]]
  */
 trait HasKey {
-  def keyValue: KeyValue
+  def keyValue: SyntheticKeyValue
 }
 
 trait HasStringKey extends HasKey {
   def id: String
-  def keyValue = KeyValue(id)
+  def keyValue = SyntheticKeyValue(id)
 }
 
 trait HasIntKey extends HasKey {
   def id: Int
-  def keyValue = KeyValue(id)
+  def keyValue = SyntheticKeyValue(id)
 }
 
 trait HasLongKey extends HasKey {
   def id: Long
-  def keyValue = KeyValue(id)
+  def keyValue = SyntheticKeyValue(id)
 }
-
-class Key[T](_bytes: Array[Byte]) extends KeyValue(_bytes)
 
 //////////////////////////////////////
 // Key Paths - describe the key path
@@ -110,36 +165,36 @@ class Key[T](_bytes: Array[Byte]) extends KeyValue(_bytes)
  * @see [[KeyPath1]]
  * @see [[CompositePath]]
  */
-sealed abstract class KeyPath[H](val prefix: KeyValue) {
+sealed abstract class KeyPath[H](val prefix: SyntheticKeyValue) {
   type This <: KeyPath[H]
-  def withPrefix(prefix: KeyValue): This
+  def withPrefix(prefix: SyntheticKeyValue): This
 }
 
-final class KeyPath1[H](_prefix: KeyValue, val getKeyValue: H => KeyValue) extends KeyPath[H](_prefix) {
+final class KeyPath1[H](_prefix: SyntheticKeyValue, val getKeyValue: H => SyntheticKeyValue) extends KeyPath[H](_prefix) {
   type This = KeyPath1[H]
   def ::[H0](v: KeyPath1[H0]) = new CompositePath(v.prefix, v.getKeyValue, this)
-  def ::(_prefix: String) = new KeyPath1(KeyValue(_prefix).append(prefix), getKeyValue)
-  def withPrefix(_prefix: KeyValue) = new KeyPath1(_prefix.append(prefix), getKeyValue)
+  def ::(_prefix: String) = new KeyPath1(SyntheticKeyValue(_prefix).append(prefix), getKeyValue)
+  def withPrefix(_prefix: SyntheticKeyValue) = new KeyPath1(_prefix.append(prefix), getKeyValue)
 
-  def apply(h: H) = new Key[H](prefix.append(getKeyValue(h)).bytes)
+  def apply(h: H) = new Key[H](prefix.append(getKeyValue(h)))
 }
 
-final class CompositePath[H, T <: KeyPath[_]](_prefix: KeyValue, head: H => KeyValue, val tail: T) extends KeyPath[H](_prefix) {
+final class CompositePath[H, T <: KeyPath[_]](_prefix: SyntheticKeyValue, head: H => SyntheticKeyValue, val tail: T) extends KeyPath[H](_prefix) {
   type This = CompositePath[H, T]
   def ::[H0](v: KeyPath1[H0]) = new CompositePath(v.prefix, v.getKeyValue, this)
-  def ::(_prefix: String) = new CompositePath(KeyValue(_prefix).append(prefix), head, tail)
-  def withPrefix(_prefix: KeyValue) = new CompositePath(_prefix.append(prefix), head, tail)
+  def ::(_prefix: String) = new CompositePath(SyntheticKeyValue(_prefix).append(prefix), head, tail)
+  def withPrefix(_prefix: SyntheticKeyValue) = new CompositePath(_prefix.append(prefix), head, tail)
 
   def apply(h: H) = tail.withPrefix(prefix.append(head(h)))
 }
 
 trait Keys {
-  trait KeyExtractor[A] extends (A => KeyValue)
+  trait KeyExtractor[A] extends (A => SyntheticKeyValue)
 
   implicit def hasId2KeyExtractor[A <: HasKey] = new KeyExtractor[A] { def apply(a: A) = a.keyValue }
-  implicit def ser2KeyExtractor[A: Serializer] = new KeyExtractor[A] { def apply(a: A) = KeyValue(a) }
+  implicit def ser2KeyExtractor[A: Serializer] = new KeyExtractor[A] { def apply(a: A) = SyntheticKeyValue(a) }
 
-  def path[A](implicit keyExtractor: KeyExtractor[A]) = new KeyPath1[A](KeyValue.empty, keyExtractor)
+  def path[A](implicit keyExtractor: KeyExtractor[A]) = new KeyPath1[A](SyntheticKeyValue.empty, keyExtractor)
 
   ///////////////////////////////
   // Shortcuts for up to 5 beans

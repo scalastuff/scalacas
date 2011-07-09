@@ -57,6 +57,8 @@ trait Serializers {
     override def fromByteBuffer(buffer: ByteBuffer): Long = wrapped.fromByteBuffer(buffer).longValue
     override def fromBytes(buffer: Array[Byte]): Long = wrapped.fromBytes(buffer).longValue
   }
+  
+  implicit val keyValueSerializer = KeyValue.Serializer
 
   def toBytes[A](a: A)(implicit s: Serializer[A]): Array[Byte] = s.toBytes(a)
   def fromBytes[A](buffer: Array[Byte])(implicit s: Serializer[A]): A = s.fromBytes(buffer)

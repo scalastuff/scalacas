@@ -21,5 +21,5 @@ package org.scalastuff.scalacas
  */
 object StringMapper extends Mapper[String] {  
   def objectToBytes(ref: String) = Array[Byte]() // actual string will be stored in the column name
-  def columnToObject(column: Column): String = fromBytes[String](column.getName)
+  def columnToObject(column: Column): String = fromBytes[String](toBytes(column.getName))
 }

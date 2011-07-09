@@ -21,47 +21,47 @@ import me.prettyprint.hector.api.factory.HFactory
 
 trait Mutators extends Serializers { self: ColumnFamily =>
 
-  type Mutator = HectorMutator[Array[Byte]]  
+  type Mutator = HectorMutator[KeyValue]  
 
-  protected def createMutator() = HFactory.createMutator(self.keyspace, bytesSerializer)
+  protected def createMutator(): Mutator = HFactory.createMutator(self.keyspace, keyValueSerializer)
 
   def write[A <: AnyRef](rowKey: KeyValue, obj: A)(implicit mapper: Mapper[A], keyPath: KeyPath1[A]) = (mutator: Mutator, cf: ColumnFamily) => {
-    mutator.addInsertion(rowKey.bytes, cf.columnFamilyName, mapper.objectToColumn(keyPath(obj), obj))
+    mutator.addInsertion(rowKey, cf.columnFamilyName, mapper.objectToColumn(keyPath(obj), obj))
   }
   
   def write[A <: AnyRef](rowKey: KeyValue, columnKey: Key[A], obj: A)(implicit mapper: Mapper[A]) = (mutator: Mutator, cf: ColumnFamily) => {
-    mutator.addInsertion(rowKey.bytes, cf.columnFamilyName, mapper.objectToColumn(columnKey, obj))
+    mutator.addInsertion(rowKey, cf.columnFamilyName, mapper.objectToColumn(columnKey, obj))
   }
 
   def writeAll[A <: AnyRef](rowKey: KeyValue, objs: Iterable[A])(implicit mapper: Mapper[A], keyPath: KeyPath1[A]) = (mutator: Mutator, cf: ColumnFamily) => {
     for (obj <- objs)
-      mutator.addInsertion(rowKey.bytes, cf.columnFamilyName, mapper.objectToColumn(keyPath(obj), obj))
+      mutator.addInsertion(rowKey, cf.columnFamilyName, mapper.objectToColumn(keyPath(obj), obj))
   }
 
   def delete[A <: AnyRef](rowKey: KeyValue, obj: A)(implicit keyPath: KeyPath1[A]) = (mutator: Mutator, cf: ColumnFamily) => {
-    mutator.addDeletion(rowKey.bytes, cf.columnFamilyName, keyPath(obj).bytes, bytesSerializer)
+    mutator.addDeletion(rowKey, cf.columnFamilyName, keyPath(obj), keyValueSerializer)
   }
   
   def delete[A <: AnyRef](rowKey: KeyValue, columnKey: Key[A]) = (mutator: Mutator, cf: ColumnFamily) => {
-    mutator.addDeletion(rowKey.bytes, cf.columnFamilyName, columnKey.bytes, bytesSerializer)
+    mutator.addDeletion(rowKey, cf.columnFamilyName, columnKey, keyValueSerializer)
   }
 
   def deleteAll[A <: AnyRef](rowKey: KeyValue, objs: Iterable[A])(implicit keyPath: KeyPath1[A]) = (mutator: Mutator, cf: ColumnFamily) => {
     for (obj <- objs)
-      mutator.addDeletion(rowKey.bytes, cf.columnFamilyName, keyPath(obj).bytes, bytesSerializer)
+      mutator.addDeletion(rowKey, cf.columnFamilyName, keyPath(obj), keyValueSerializer)
   }
   
   def deleteAll[A <: AnyRef](rowKey: KeyValue, columnKeys: Iterable[Key[A]]) = (mutator: Mutator, cf: ColumnFamily) => {
     for (columnKey <- columnKeys)
-      mutator.addDeletion(rowKey.bytes, cf.columnFamilyName, columnKey.bytes, bytesSerializer)
+      mutator.addDeletion(rowKey, cf.columnFamilyName, columnKey, keyValueSerializer)
   }
 
   def deleteRow(rowKey: KeyValue) = (mutator: Mutator, cf: ColumnFamily) => {
-    mutator.addDeletion(rowKey.bytes, cf.columnFamilyName)
+    mutator.addDeletion(rowKey, cf.columnFamilyName)
   }
 
   def deleteRows(keys: KeyValue*) = (mutator: Mutator, cf: ColumnFamily) => {
     for (key <- keys)
-      mutator.addDeletion(key.bytes, cf.columnFamilyName)
+      mutator.addDeletion(key, cf.columnFamilyName)
   }
 }

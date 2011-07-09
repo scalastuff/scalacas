@@ -24,7 +24,7 @@ import org.scalastuff.proto._
  *
  * @author Alexander Dvorkovyy
  */
-class ProtobufMapper[A <: HasKey]()(implicit mf: Manifest[A]) extends AbstractProtobufMapper[A]
+class ProtobufMapper[A <: AnyRef]()(implicit mf: Manifest[A]) extends AbstractProtobufMapper[A]
 
 abstract class AbstractProtobufMapper[A <: AnyRef]()(implicit mf: Manifest[A]) extends Mapper[A] {
   val reader = readerOf[A]

@@ -3,8 +3,8 @@ package org.scalastuff.scalacas
 import Serializers._
 
 case class Query(keys: Seq[KeyValue],
-  fromColumnName: KeyValue = KeyValue.empty,
-  toColumnName: KeyValue = KeyValue.empty,
+  fromColumnName: KeyValue = SyntheticKeyValue.empty,
+  toColumnName: KeyValue = SyntheticKeyValue.empty,
   maxColumnCount: Int = Integer.MAX_VALUE,
   rev: Boolean = false) {
   
@@ -16,7 +16,7 @@ case class Query(keys: Seq[KeyValue],
   
   def havingPath(keyPath: KeyPath[_]) =
     this.copy(fromColumnName = keyPath.prefix,
-      toColumnName = keyPath.prefix.append(KeyValue(255.asInstanceOf[Byte]))) // FIXME: replace last byte with 255
+      toColumnName = keyPath.prefix) // FIXME: replace last byte with 255
       
   def limit(maxColumnCount: Int) = this.copy(maxColumnCount = maxColumnCount)
   def reversed() = this.copy(rev = true)

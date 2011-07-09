@@ -18,14 +18,14 @@ package org.scalastuff.scalacas
 import scala.collection.JavaConversions._
 import me.prettyprint.hector.api.beans.HColumn
 
-class QueryResult(row: Iterable[HColumn[Array[Byte], Array[Byte]]]) {
-  def filter[O <: AnyRef](implicit mapper: Mapper[O], keyPath: KeyPath1[O]): Iterable[O] = {
-    for (col <- row if col.getName startsWith keyPath.prefix.bytes)
+class QueryResult(row: Iterable[HColumn[KeyValue, Array[Byte]]]) {
+  def filter[A <: AnyRef](implicit mapper: Mapper[A], keyPath: KeyPath1[A]): Iterable[A] = {
+    for (col <- row if keyPath.prefix.isPrefixOf(col.getName) )
       yield mapper.columnToObject(col)
   }
   
-  def find[O <: AnyRef](implicit mapper: Mapper[O], keyPath: KeyPath1[O]): Option[O] = {
-    for (col <- row find { col => col.getName startsWith keyPath.prefix.bytes } )
+  def find[A <: AnyRef](implicit mapper: Mapper[A], keyPath: KeyPath1[A]): Option[A] = {
+    for (col <- row find { col => keyPath.prefix.isPrefixOf(col.getName) } )
       yield mapper.columnToObject(col)
   }
 }

@@ -22,7 +22,7 @@ class IndexColumnFamily(_db: Database, _columnFamilyName: String) extends Column
 
   def findByKey(keyValue: String): Set[String] = {
     for {
-      result <- select(KeyValue(keyValue)).execute()
+      result <- select(rowKey(keyValue)).execute()
       ref <- result.filter[String]
     } yield ref
   } toSet

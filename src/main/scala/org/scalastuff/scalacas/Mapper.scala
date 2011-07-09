@@ -27,10 +27,10 @@ import me.prettyprint.hector.api.factory.HFactory
  * @author Alexander Dvorkovyy
  */
 abstract class Mapper[A <: AnyRef] extends Serializers with Keys {
-  type Column = HColumn[Array[Byte], Array[Byte]]
+  type Column = HColumn[KeyValue, Array[Byte]]
 
   def objectToColumn(columnKey: Key[A], obj: A) = 
-    HFactory.createColumn(columnKey.bytes, objectToBytes(obj), bytesSerializer, bytesSerializer)
+    HFactory.createColumn(columnKey, objectToBytes(obj), keyValueSerializer, bytesSerializer)
     
   def columnToObject(column: Column): A  
   def objectToBytes(obj: A): Array[Byte]  
