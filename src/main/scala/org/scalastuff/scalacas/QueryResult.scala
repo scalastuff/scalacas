@@ -25,8 +25,12 @@ class QueryResult(row: Iterable[HColumn[KeyValue, Array[Byte]]]) {
       yield mapper.columnToObject(col)
   }
   
+  def filter[A <: AnyRef](keyPath: KeyPath1[A])(implicit mapper: Mapper[A]): Iterable[A] = filter(mapper, keyPath)
+  
   def find[A <: AnyRef](implicit mapper: Mapper[A], keyPath: KeyPath1[A]): Option[A] = {
     for (col <- row find { col => keyPath.isPathOf(col.getName) } )
       yield mapper.columnToObject(col)
   }
+  
+  def find[A <: AnyRef](keyPath: KeyPath1[A])(implicit mapper: Mapper[A]): Option[A] = find(mapper, keyPath)
 }

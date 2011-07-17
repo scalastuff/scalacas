@@ -33,47 +33,61 @@ package org.scalastuff.scalacas.keys
  */
 sealed abstract class KeyPath[H](val prefix: KeyValue) {
   type This <: KeyPath[H]
-  def withPrefix(prefix: KeyValue): This
+  protected[keys] def withPrefix(prefix: KeyValue): This
+  
   def startRange = prefix.withSuffix(0)
   def endRange = prefix.withSuffix(1)
 }
 
-final class KeyPath1[H](_prefix: KeyValue, val entityIdCodec: EntityIdCodec[H]) extends KeyPath[H](_prefix) {
+final class KeyPath1[H](_prefix: KeyValue, val suffix: KeyValue, val entityIdCodec: EntityIdCodec[H]) extends KeyPath[H](_prefix) {
   import IdCodecs._
   
   type This = KeyPath1[H]
-  def ::[H0](v: KeyPath1[H0]) = new CompositePath(v.prefix, v.entityIdCodec, this)
-  def ::(_prefix: String) = new KeyPath1(KeyValue(_prefix).append(prefix), entityIdCodec)
-  def withPrefix(_prefix: KeyValue) = new KeyPath1(_prefix.append(prefix), entityIdCodec)
   
-  def isPathOf(keyValue: KeyValue) = prefix.isPrefixOf(keyValue) && entityIdCodec.canDecodeId(keyValue, prefix.length + 1)
+  def ::[H0](v: KeyPath1[H0]) = {
+    new CompositePath(
+        v.prefix, 
+        v.entityIdCodec, 
+        new KeyPath1(v.suffix.append(prefix), suffix, entityIdCodec))
+  }
+  def ::(_prefix: String) = new KeyPath1(KeyValue(_prefix).append(prefix), suffix, entityIdCodec)
+  def +(_suffix: String) = new KeyPath1(prefix, suffix.append(KeyValue(_suffix)), entityIdCodec)
+  
+  protected[keys] def withPrefix(_prefix: KeyValue) = new KeyPath1(_prefix.append(prefix), suffix, entityIdCodec)
+  
+  def isPathOf(keyValue: KeyValue) = {
+    // take delimiter byte into account
+    val fullPrefixLength = if (prefix.length == 0) 0 else prefix.length + 1
+    val fullSuffixLength = if (suffix.length == 0) 0 else suffix.length + 1
+    
+    prefix.isPrefixOf(keyValue) && 
+    suffix.isSuffixOf(keyValue) && 
+    entityIdCodec.canDecodeId(keyValue, fullPrefixLength, keyValue.length - fullPrefixLength - fullSuffixLength)
+  }
 
-  def apply(h: H) = new Key[H](prefix.append(entityIdCodec.encodeId(h)))
+  def apply(h: H) = new Key[H](prefix.append(entityIdCodec.encodeId(h)).append(suffix))
 }
 
 final class CompositePath[H, T <: KeyPath[_]](_prefix: KeyValue, head: EntityIdCodec[H], val tail: T) extends KeyPath[H](_prefix) {
   import IdCodecs._
   
   type This = CompositePath[H, T]
+  
   def ::[H0](v: KeyPath1[H0]) = new CompositePath(v.prefix, v.entityIdCodec, this)
   def ::(_prefix: String) = new CompositePath(KeyValue(_prefix).append(prefix), head, tail)
-  def withPrefix(_prefix: KeyValue) = new CompositePath(_prefix.append(prefix), head, tail)
+  
+  protected[keys] def withPrefix(_prefix: KeyValue) = new CompositePath(_prefix.append(prefix), head, tail)
 
   def apply(h: H) = tail.withPrefix(prefix.append(head.encodeId(h)))
 }
 
 trait KeyPaths {
-  implicit def idCodecWithIdType[B, K](implicit id: Identify[B, K], s: IdCodec[K]) = new EntityIdCodec[B] {
-    def encodeId(b: B) = KeyValue(id(b))
-    def canDecodeId(b: KeyValue, prefixLength: Int) = s.canDecode(b, prefixLength)
-  }
+  implicit def idCodecWithIdType[B, I](implicit id: Identify[B, I], c: IdCodec[I]) = EntityIdCodec[B, I](id(_))
   
-  implicit def idCodecSelf[I](implicit c: IdCodec[I]) = new EntityIdCodec[I] {
-    def encodeId(entity: I) = KeyValue(entity)
-    def canDecodeId(keyValue: KeyValue, prefixLength: Int) = c.canDecode(keyValue, prefixLength)
-  }
+  implicit def idCodecSelf[I](implicit c: IdCodec[I]) = EntityIdCodec[I, I] {x => x}
 
-  def path[A](implicit entityIdCodec: EntityIdCodec[A]) = new KeyPath1[A](KeyValue.empty, entityIdCodec)
+  def path[A](implicit entityIdCodec: EntityIdCodec[A]) = new KeyPath1[A](KeyValue.empty, KeyValue.empty, entityIdCodec)
+  def path[A, K: IdCodec](f: A => K) = new KeyPath1[A](KeyValue.empty, KeyValue.empty, EntityIdCodec[A, K](f)) 
 
   ///////////////////////////////
   // Shortcuts for up to 5 beans

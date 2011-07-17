@@ -19,7 +19,7 @@ import java.nio.ByteBuffer
 
 trait IdCodec[A] {
   def encode(a: A): Array[Byte]
-  def canDecode(b: KeyValue, prefixLength: Int): Boolean
+  def canDecode(b: KeyValue, prefixLength: Int, length: Int): Boolean
   //  def decode(b: Array[Byte], prefixLength: Int): Option[A]
 }
 
@@ -28,7 +28,7 @@ trait IdCodec[A] {
  */
 trait EntityIdCodec[B] {
   def encodeId(b: B): KeyValue
-  def canDecodeId(b: KeyValue, prefixLength: Int): Boolean
+  def canDecodeId(b: KeyValue, start: Int, length: Int): Boolean
 
   //  /**
   //   * Need implicits here to get concrete entity id type
@@ -36,6 +36,12 @@ trait EntityIdCodec[B] {
   //  def decodeId[K](b: Array[Byte], prefixLength: Int)(implicit e: Identify[B, K], s: IdCodec[K]): Option[K] = {
   //    s.decode(b, prefixLength)
   //  }
+}
+object EntityIdCodec {
+  def apply[B, A](f: B => A)(implicit c: IdCodec[A]) = new EntityIdCodec[B] {
+    def encodeId(b: B) = KeyValue(f(b))
+    def canDecodeId(b: KeyValue, start: Int, length: Int) = c.canDecode(b, start, length)
+  }
 }
 
 trait IdCodecs {
@@ -58,7 +64,7 @@ object IdCodecs extends IdCodecs {
       result
     }
 
-    def canDecode(b: KeyValue, prefixLength: Int): Boolean = !(b.iterator.drop(prefixLength) contains 0)
+    def canDecode(b: KeyValue, start: Int, length: Int): Boolean = !(b.iterator.drop(start).take(length) contains 0)
   }
   
   class FixedLengthCodec[F](val byteLength: Int, put: (ByteBuffer, F) => Unit) extends IdCodec[F] {
@@ -68,7 +74,7 @@ object IdCodecs extends IdCodecs {
       bb.array()
     }
 
-    def canDecode(b: KeyValue, prefixLength: Int): Boolean = (b.length - prefixLength) == byteLength
+    def canDecode(b: KeyValue, start: Int, length: Int): Boolean = (length == byteLength) && (b.length >= start + length)
   }
 
   object LongIdCodec extends FixedLengthCodec[Long](8, _.putLong(_))

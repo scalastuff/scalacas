@@ -103,6 +103,7 @@
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-log4j12</artifactId>
 			<version>1.6.1</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.scalastuff</groupId>
@@ -126,6 +127,16 @@
 			<artifactId>hector-core</artifactId>
 			<version>0.8.0-1</version>
 			<type>jar</type>
+			<exclusions>
+				<exclusion>
+					<artifactId>log4j</artifactId>
+					<groupId>log4j</groupId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>slf4j-log4j12</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>		
 	</dependencies>
 	<repositories>

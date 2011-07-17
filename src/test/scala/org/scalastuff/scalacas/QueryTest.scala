@@ -14,7 +14,7 @@ class QueryTest {
 
   @Test @Ignore  
   def testObjectOfClass() {
-    val qry = Query(List(rowKey(1))).havingPath(columnKeyA)
+    val qry = Query(List(rowKey(1))).having(columnKeyA)
     assertEquals(Some("A "), qry.fromColumnName)
     assertEquals(Some("A ~"), qry.toColumnName)
   }

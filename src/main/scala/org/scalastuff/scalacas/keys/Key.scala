@@ -52,6 +52,19 @@ class KeyValue private[KeyValue] (private[KeyValue] val bytes: Array[Byte]) {
     true
   }
   
+  def isSuffixOf(other: KeyValue): Boolean = {
+    val otherBytes = other.bytes
+    if (otherBytes.length < bytes.length) return false
+    var i = 0
+    val startOtherBytes = otherBytes.length - bytes.length
+    while (i < bytes.length) {
+      if (bytes(i) != otherBytes(startOtherBytes + i)) return false
+      i += 1
+    }
+
+    true
+  }
+  
   @inline
   def length = bytes.length
   

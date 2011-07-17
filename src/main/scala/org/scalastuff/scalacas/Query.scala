@@ -29,7 +29,7 @@ case class Query(keys: Seq[KeyValue],
   def to(key: Key[_]) = this.copy(toColumnName = key.value)
   def to(keyPath: KeyPath[_]) = this.copy(toColumnName = keyPath.endRange)
   
-  def havingPath(keyPath: KeyPath[_]) =
+  def having(keyPath: KeyPath[_]) =
     this.copy(fromColumnName = keyPath.startRange,
       toColumnName = keyPath.endRange) 
       

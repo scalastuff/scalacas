@@ -23,46 +23,67 @@ import Serializers._
 
 trait Mutators { self: ColumnFamily =>
 
-  type Mutator = HectorMutator[KeyValue]  
+  type Mutator = HectorMutator[KeyValue]
+  type Mutation = (Mutator, ColumnFamily) => Unit
 
   protected def createMutator(): Mutator = HFactory.createMutator(self.keyspace, keyValueSerializer)
 
-  def write[A <: AnyRef](rowKey: KeyValue, obj: A)(implicit mapper: Mapper[A], keyPath: KeyPath1[A]) = (mutator: Mutator, cf: ColumnFamily) => {
-    mutator.addInsertion(rowKey, cf.columnFamilyName, mapper.objectToColumn(keyPath(obj), obj))
+  def write[A <: AnyRef](rowKey: KeyValue, obj: A)(implicit mapper: Mapper[A], columnKeyPath: KeyPath1[A]): Mutation = (mutator: Mutator, cf: ColumnFamily) => {
+    mutator.addInsertion(rowKey, cf.columnFamilyName, mapper.objectToColumn(columnKeyPath(obj), obj))
   }
   
-  def write[A <: AnyRef](rowKey: KeyValue, columnKey: Key[A], obj: A)(implicit mapper: Mapper[A]) = (mutator: Mutator, cf: ColumnFamily) => {
+  @inline
+  def write[A <: AnyRef](rowKey: KeyValue, columnKeyPath: KeyPath1[A], obj: A)(implicit mapper: Mapper[A]): Mutation = {
+    write(rowKey, obj)(mapper, columnKeyPath)
+  }
+  
+  def write[A <: AnyRef](rowKey: KeyValue, columnKey: Key[A], obj: A)(implicit mapper: Mapper[A]): Mutation = (mutator: Mutator, cf: ColumnFamily) => {
     mutator.addInsertion(rowKey, cf.columnFamilyName, mapper.objectToColumn(columnKey, obj))
   }
 
-  def writeAll[A <: AnyRef](rowKey: KeyValue, objs: Iterable[A])(implicit mapper: Mapper[A], keyPath: KeyPath1[A]) = (mutator: Mutator, cf: ColumnFamily) => {
+  def writeAll[A <: AnyRef](rowKey: KeyValue, objs: Traversable[A])(implicit mapper: Mapper[A], columnKeyPath: KeyPath1[A]): Mutation = (mutator: Mutator, cf: ColumnFamily) => {
     for (obj <- objs)
-      mutator.addInsertion(rowKey, cf.columnFamilyName, mapper.objectToColumn(keyPath(obj), obj))
-  }
-
-  def delete[A <: AnyRef](rowKey: KeyValue, obj: A)(implicit keyPath: KeyPath1[A]) = (mutator: Mutator, cf: ColumnFamily) => {
-    mutator.addDeletion(rowKey, cf.columnFamilyName, keyPath(obj).value, keyValueSerializer)
+      mutator.addInsertion(rowKey, cf.columnFamilyName, mapper.objectToColumn(columnKeyPath(obj), obj))
   }
   
-  def delete[A <: AnyRef](rowKey: KeyValue, columnKey: Key[A]) = (mutator: Mutator, cf: ColumnFamily) => {
+  @inline
+  def writeAll[A <: AnyRef](rowKey: KeyValue, columnKeyPath: KeyPath1[A], objs: Traversable[A])(implicit mapper: Mapper[A]): Mutation = {
+    writeAll(rowKey, objs)(mapper, columnKeyPath)
+  }
+
+  def delete[A <: AnyRef](rowKey: KeyValue, obj: A)(implicit columnKeyPath: KeyPath1[A]): Mutation = (mutator: Mutator, cf: ColumnFamily) => {
+    mutator.addDeletion(rowKey, cf.columnFamilyName, columnKeyPath(obj).value, keyValueSerializer)
+  }
+  
+  @inline
+  def delete[A <: AnyRef](rowKey: KeyValue, columnKeyPath: KeyPath1[A], obj: A): Mutation = {
+    delete(rowKey, obj)(columnKeyPath)
+  }
+  
+  def delete[A <: AnyRef](rowKey: KeyValue, columnKey: Key[A]): Mutation = (mutator: Mutator, cf: ColumnFamily) => {
     mutator.addDeletion(rowKey, cf.columnFamilyName, columnKey.value, keyValueSerializer)
   }
 
-  def deleteAll[A <: AnyRef](rowKey: KeyValue, objs: Iterable[A])(implicit keyPath: KeyPath1[A]) = (mutator: Mutator, cf: ColumnFamily) => {
+  def deleteAll[A <: AnyRef](rowKey: KeyValue, objs: Traversable[A])(implicit columnKeyPath: KeyPath1[A]): Mutation = (mutator: Mutator, cf: ColumnFamily) => {
     for (obj <- objs)
-      mutator.addDeletion(rowKey, cf.columnFamilyName, keyPath(obj).value, keyValueSerializer)
+      mutator.addDeletion(rowKey, cf.columnFamilyName, columnKeyPath(obj).value, keyValueSerializer)
   }
   
-  def deleteAll[A <: AnyRef](rowKey: KeyValue, columnKeys: Iterable[Key[A]]) = (mutator: Mutator, cf: ColumnFamily) => {
+  @inline
+  def deleteAll[A <: AnyRef](rowKey: KeyValue, columnKeyPath: KeyPath1[A], objs: Traversable[A]): Mutation = {
+    deleteAll(rowKey, objs)(columnKeyPath)
+  }
+  
+  def deleteAll[A <: AnyRef](rowKey: KeyValue, columnKeys: Traversable[Key[A]]): Mutation = (mutator: Mutator, cf: ColumnFamily) => {
     for (columnKey <- columnKeys)
       mutator.addDeletion(rowKey, cf.columnFamilyName, columnKey.value, keyValueSerializer)
   }
 
-  def deleteRow(rowKey: KeyValue) = (mutator: Mutator, cf: ColumnFamily) => {
+  def deleteRow(rowKey: KeyValue): Mutation = (mutator: Mutator, cf: ColumnFamily) => {
     mutator.addDeletion(rowKey, cf.columnFamilyName)
   }
 
-  def deleteRows(keys: KeyValue*) = (mutator: Mutator, cf: ColumnFamily) => {
+  def deleteRows(keys: KeyValue*): Mutation = (mutator: Mutator, cf: ColumnFamily) => {
     for (key <- keys)
       mutator.addDeletion(key, cf.columnFamilyName)
   }
